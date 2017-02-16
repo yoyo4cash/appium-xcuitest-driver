@@ -2,6 +2,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import B from 'bluebird';
 import _ from 'lodash';
+import { retryInterval } from 'asyncbox';
 import { UICATALOG_CAPS, PLATFORM_VERSION } from '../desired';
 import { initSession, deleteSession, MOCHA_TIMEOUT } from '../helpers/session';
 import { GUINEA_PIG_PAGE } from '../web/helpers';
@@ -176,13 +177,10 @@ describe('XCUITestDriver - basics', function () {
 
   describe('contexts', () => {
     before(async function () {
-      if (process.env.TRAVIS) return this.skip();
+      await driver.back();
       let el = await driver.elementByAccessibilityId('Web View');
       await driver.execute('mobile: scroll', {element: el, toVisible: true});
       await el.click();
-
-      // pause a moment to allow the view to load before trying to do anything
-      await B.delay(1000);
     });
     after(async () => {
       await driver.back();
@@ -190,8 +188,11 @@ describe('XCUITestDriver - basics', function () {
     });
 
     it('should start a session, navigate to url, get title', async () => {
-      let contexts = await driver.contexts();
-      contexts.length.should.be.at.least(2);
+      let contexts;
+      await retryInterval(10, 1000, async () => {
+        contexts = await driver.contexts();
+        contexts.length.should.be.at.least(2);
+      });
 
       let urlBar = await driver.elementByClassName('XCUIElementTypeTextField');
       await urlBar.clear();
