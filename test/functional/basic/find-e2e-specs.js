@@ -58,7 +58,7 @@ describe('XCUITestDriver - find', function () {
 
   let driver;
   before(async () => {
-    driver = await initSession(UICATALOG_CAPS);
+    driver = await initSession(_.defaults({showXcodeLog: true}, UICATALOG_CAPS));
   });
   after(async () => {
     await deleteSession();

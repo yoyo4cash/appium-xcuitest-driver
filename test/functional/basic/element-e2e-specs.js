@@ -318,6 +318,7 @@ describe('XCUITestDriver - element(s)', function () {
         await el.click();
 
         let wheels = await driver.elementsByClassName('XCUIElementTypePickerWheel');
+        wheels.should.have.length(3);
 
         let values = [65, 205, 120];
         for (let i = 0; i < 3; i++) {

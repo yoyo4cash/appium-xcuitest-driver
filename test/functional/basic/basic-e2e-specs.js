@@ -2,6 +2,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import B from 'bluebird';
 import _ from 'lodash';
+import { retryInterval } from 'asyncbox';
 import { UICATALOG_CAPS, PLATFORM_VERSION } from '../desired';
 import { initSession, deleteSession, MOCHA_TIMEOUT } from '../helpers/session';
 import { GUINEA_PIG_PAGE } from '../web/helpers';
@@ -126,6 +127,25 @@ describe('XCUITestDriver - basics', function () {
       it('should get crash logs', async () => {
         (await driver.log('crashlog')).should.be.an.Array;
       });
+      it('should not get performance logs in native context', async () => {
+        await driver.log('performance').should.eventually.be.rejected;
+      });
+      it.skip('should get performance logs in web context', async () => {
+        // TODO: enable once performance logging in appium-ios-driver works
+        let el = await driver.elementByAccessibilityId('Web View');
+        await driver.execute('mobile: scroll', {element: el, toVisible: true});
+        await el.click();
+
+        await retryInterval(10, 1000, async () => {
+          let contexts = await driver.contexts();
+          if (contexts.length === 1) {
+            throw new Error('Only able to find native context');
+          }
+          await driver.context(_.last(contexts));
+        });
+
+        (await driver.log('performance')).should.be.an.Array;
+      });
     });
   });
 
@@ -187,14 +207,15 @@ describe('XCUITestDriver - basics', function () {
   });
 
   describe('contexts', () => {
-    before(async function () {
-      if (process.env.TRAVIS) return this.skip();
+    before(async () => {
       let el = await driver.elementByAccessibilityId('Web View');
       await driver.execute('mobile: scroll', {element: el, toVisible: true});
       await el.click();
 
-      // pause a moment to allow the view to load before trying to do anything
-      await B.delay(1000);
+      await retryInterval(10, 1000, async () => {
+        let contexts = await driver.contexts();
+        contexts.length.should.be.at.least(2);
+      });
     });
     after(async () => {
       await driver.back();
@@ -202,9 +223,6 @@ describe('XCUITestDriver - basics', function () {
     });
 
     it('should start a session, navigate to url, get title', async () => {
-      let contexts = await driver.contexts();
-      contexts.length.should.be.at.least(2);
-
       let urlBar = await driver.elementByClassName('XCUIElementTypeTextField');
       await urlBar.clear();
 
@@ -213,8 +231,8 @@ describe('XCUITestDriver - basics', function () {
       let buttons = await driver.elementsByClassName('XCUIElementTypeButton');
       await _.last(buttons).click();
 
-      await driver.setImplicitWaitTimeout(10000);
-      await driver.context(contexts[1]);
+      let contexts = await driver.contexts();
+      await driver.context(_.last(contexts));
 
       // wait for something on the page, before checking on title
       await driver.elementById('i_am_a_textbox');
