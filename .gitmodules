@@ -1,1 +1,4 @@
 
+[submodule "WebDriverAgent"]
+	path = WebDriverAgent
+	url = https://github.com/imurchie/WebDriverAgent.git

@@ -137,11 +137,13 @@ describe('XCUITestDriver - element(s)', function () {
         it.only('should break', async function () { // eslint-disable-line
           this.timeout(0);
           let el = await driver.elementByClassName('XCUIElementTypeTextField');
-          for (let i = 0; i < 200; i++) {
+          for (let i = 0; i < 500; i++) {
             await el.type(text1);
 
             let text = await el.text();
-            text.should.include(text1);
+            text.should.eql(text1);
+
+            await el.clear();
           }
         });
         it('should type in the text field', async () => {
